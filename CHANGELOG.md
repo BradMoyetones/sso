@@ -12,11 +12,12 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y e
 - Modelos: `AuthUser` → `Account`, `AuthCompany` → `Company`, `AuthManagement` → `Management`.
 - Excepciones sin prefijo: `GrantException`, `UnavailableException`, `ProvisioningException`.
 - `Authenticator`: el parámetro `accounts` del constructor pasa a llamarse `client`.
+- `firebase/php-jwt` sube de `^6.10` a `^7.1.1`: las versiones 6.x están afectadas por [GHSA-2x45-7fc3-mxwq](https://github.com/advisories/GHSA-2x45-7fc3-mxwq) y Composer 2.9 ya no las instala.
 
 ### Agregado
 - Interfaz `Exceptions\SsoException`, implementada por todas las excepciones del paquete.
 - Los modelos usan `AuthConnection::NAME` en lugar del literal `'auth'`.
-- Pruebas para modelos, `AuthConnection`, excepciones y autoload PSR-4.
+- Pruebas para modelos, `AuthConnection`, excepciones, autoload PSR-4 y verificación RS256 + JWKS de extremo a extremo.
 - CI en GitHub Actions (PHP 8.1 – 8.4, dependencias mínimas y máximas).
 - Guía de migración en [`docs/upgrade-v2.md`](docs/upgrade-v2.md).
 

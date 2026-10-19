@@ -58,6 +58,9 @@ new Authenticator(client: $client, sessions: $sessions, cipher: $cipher);
 
 Con autowiring (PHP-DI) no hay que hacer nada: basta con actualizar los type-hints.
 
+### Dependencia `firebase/php-jwt` 7.x
+El paquete ahora requiere `firebase/php-jwt: ^7.1.1` (las 6.x tienen el aviso [GHSA-2x45-7fc3-mxwq](https://github.com/advisories/GHSA-2x45-7fc3-mxwq)). Si tu app declara `firebase/php-jwt: ^6.x` directamente en su `composer.json`, súbela a `^7.1.1` o elimínala si no la usas por tu cuenta.
+
 ### Parámetro de `Account::loadOrganization()`
 El parámetro pasó de `$authUsers` a `$accounts`. Solo afecta si lo llamabas con argumento nombrado.
 
