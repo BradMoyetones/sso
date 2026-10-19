@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Fpjd\Sso;
+namespace Fpjd\Sso\Security;
 
 /**
  * Cifrado autenticado (AES-256-GCM) para el contenido de cookies y tokens de relevo.

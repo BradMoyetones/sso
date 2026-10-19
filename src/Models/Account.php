@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Fpjd\Sso\Models;
 
+use Fpjd\Sso\Database\AuthConnection;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,11 +13,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * Modelo de solo lectura para la identidad pública de usuarios en Accounts (SSO).
  * Mapea a la vista `users_public` (excluyendo contraseñas y datos sensibles).
  *
- * NOTA: La conexión 'auth' está estrictamente reservada para este paquete.
+ * NOTA: La conexión AuthConnection::NAME ('auth') está estrictamente reservada para este paquete.
  */
-class AuthUser extends Model
+class Account extends Model
 {
-    protected $connection = 'auth';
+    protected $connection = AuthConnection::NAME;
     protected $table = 'users_public';
 
     protected $keyType = 'string';
@@ -43,20 +44,20 @@ class AuthUser extends Model
      */
     public function management(): BelongsTo
     {
-        return $this->belongsTo(AuthManagement::class, 'management_id');
+        return $this->belongsTo(Management::class, 'management_id');
     }
 
     /**
      * Carga de forma tolerante `management.company` sobre uno o varios usuarios sin romper
      * si la organización no está disponible o no se tienen permisos en la base de datos.
      *
-     * @param AuthUser|iterable<AuthUser|null>|null $authUsers
+     * @param Account|iterable<Account|null>|null $accounts
      */
-    public static function loadOrganization(self|iterable|null $authUsers): void
+    public static function loadOrganization(self|iterable|null $accounts): void
     {
-        $list = $authUsers instanceof self
-            ? [$authUsers]
-            : array_filter(is_iterable($authUsers) ? iterator_to_array($authUsers, false) : []);
+        $list = $accounts instanceof self
+            ? [$accounts]
+            : array_filter(is_iterable($accounts) ? iterator_to_array($accounts, false) : []);
 
         if (!$list) {
             return;

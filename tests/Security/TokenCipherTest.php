@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Fpjd\Sso\Test;
+namespace Fpjd\Sso\Test\Security;
 
-use Fpjd\Sso\TokenCipher;
+use Fpjd\Sso\Security\TokenCipher;
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 

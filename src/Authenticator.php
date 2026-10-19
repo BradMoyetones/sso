@@ -5,11 +5,14 @@ declare(strict_types=1);
 namespace Fpjd\Sso;
 
 use Firebase\JWT\ExpiredException;
-use Fpjd\Sso\Exceptions\AccountsGrantException;
-use Fpjd\Sso\Exceptions\AccountsUnavailableException;
+use Fpjd\Sso\Contracts\Store;
+use Fpjd\Sso\Exceptions\GrantException;
 use Fpjd\Sso\Exceptions\InvalidTokenException;
 use Fpjd\Sso\Exceptions\SessionExpiredException;
 use Fpjd\Sso\Exceptions\UnauthenticatedException;
+use Fpjd\Sso\Exceptions\UnavailableException;
+use Fpjd\Sso\Security\TokenCipher;
+use Fpjd\Sso\Storage\FileStore;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 
@@ -24,15 +27,15 @@ use Psr\Http\Message\ServerRequestInterface as Request;
  * 4. Lanzar excepciones semánticas que el middleware de la aplicación puede
  *    capturar para devolver sus propias respuestas de error.
  */
-class SsoAuthenticator
+class Authenticator
 {
-    private StoreInterface $store;
+    private Store $store;
 
     public function __construct(
-        private AccountsClient $accounts,
-        private AccountSessions $sessions,
+        private Client $client,
+        private SessionManager $sessions,
         private TokenCipher $cipher,
-        ?StoreInterface $store = null,
+        ?Store $store = null,
     ) {
         $this->store = $store ?? new FileStore();
     }
@@ -43,9 +46,9 @@ class SsoAuthenticator
      * @throws UnauthenticatedException Si no hay sesión en las cookies
      * @throws SessionExpiredException Si la sesión venció o fue revocada en Accounts
      * @throws InvalidTokenException Si el token fue manipulado o no coincide con la cookie
-     * @throws AccountsUnavailableException Si el servidor SSO o el lock de concurrencia no responden
+     * @throws UnavailableException Si el servidor SSO o el lock de concurrencia no responden
      */
-    public function authenticate(Request $request): SsoAuthResult
+    public function authenticate(Request $request): AuthResult
     {
         $session = $this->sessions->find($request, $this->sessions->requested($request));
 
@@ -57,7 +60,7 @@ class SsoAuthenticator
 
         try {
             try {
-                $claims = $this->accounts->verify($session['a']);
+                $claims = $this->client->verify($session['a']);
             } catch (ExpiredException) {
                 [$claims, $renewed] = $this->renew($session);
             }
@@ -65,9 +68,9 @@ class SsoAuthenticator
             if (($claims->sub ?? null) !== $session['u']) {
                 throw new InvalidTokenException('La cuenta de la cookie no coincide con el token.');
             }
-        } catch (AccountsUnavailableException | InvalidTokenException $e) {
+        } catch (UnavailableException | InvalidTokenException $e) {
             throw $e;
-        } catch (AccountsGrantException $e) {
+        } catch (GrantException $e) {
             throw new SessionExpiredException(
                 'Tu sesión terminó. Inicia sesión de nuevo.',
                 0,
@@ -83,7 +86,7 @@ class SsoAuthenticator
             );
         }
 
-        return new SsoAuthResult(
+        return new AuthResult(
             claims: $claims,
             accountId: $session['u'],
             renewedTokens: $renewed,
@@ -117,7 +120,7 @@ class SsoAuthenticator
         $lock = $this->store->lock('refresh:' . $session['u']);
 
         if ($lock === null) {
-            throw new AccountsUnavailableException('No se pudo obtener el cerrojo de concurrencia para renovación.');
+            throw new UnavailableException('No se pudo obtener el cerrojo de concurrencia para renovación.');
         }
 
         try {
@@ -127,7 +130,7 @@ class SsoAuthenticator
             $tokens = $plain !== null ? json_decode($plain, true) : null;
 
             if (!is_array($tokens) || !isset($tokens['access_token'])) {
-                $tokens = $this->accounts->refresh($session['r']);
+                $tokens = $this->client->refresh($session['r']);
 
                 $this->store->put($key, $this->cipher->encrypt(json_encode($tokens), 'handoff'), 30);
             }
@@ -135,6 +138,6 @@ class SsoAuthenticator
             $this->store->unlock($lock);
         }
 
-        return [$this->accounts->verify($tokens['access_token']), $tokens];
+        return [$this->client->verify($tokens['access_token']), $tokens];
     }
 }

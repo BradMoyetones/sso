@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Fpjd\Sso;
+namespace Fpjd\Sso\Contracts;
 
 /**
  * Contrato para el almacenamiento de caché y sincronización concurrente
  * (locks) requerido por el cliente SSO (JWKS, relevo de refresh tokens).
  */
-interface StoreInterface
+interface Store
 {
     /**
      * Obtiene el valor almacenado para la clave dada, o null si no existe o expiró.

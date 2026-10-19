@@ -2,13 +2,15 @@
 
 declare(strict_types=1);
 
-namespace Fpjd\Sso;
+namespace Fpjd\Sso\Storage;
+
+use Fpjd\Sso\Contracts\Store;
 
 /**
  * Almacén en disco con expiración y bloqueos atómicos vía flock().
  * Diseñado para entornos monolíticos o servidores únicos.
  */
-class FileStore implements StoreInterface
+class FileStore implements Store
 {
     private string $dir;
 

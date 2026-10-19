@@ -7,9 +7,9 @@ El paquete provee tres modelos Eloquent de **solo lectura** para acceder a la es
 ## 🔒 Regla Estricta: Reserva de la Conexión `'auth'`
 
 > [!IMPORTANT]
-> Los modelos `AuthUser`, `AuthCompany` y `AuthManagement` tienen definida internamente la propiedad:
+> Los modelos `Account`, `Company` y `Management` tienen definida internamente la propiedad:
 > ```php
-> protected $connection = 'auth';
+> protected $connection = AuthConnection::NAME; // 'auth'
 > ```
 > Por lo tanto, el nombre `'auth'` queda **estrictamente reservado en Capsule** para este propósito. Toda aplicación consumidora debe registrar su conexión secundaria bajo este alias.
 
@@ -17,27 +17,27 @@ El paquete provee tres modelos Eloquent de **solo lectura** para acceder a la es
 
 ## 🏛️ Modelos Disponibles
 
-### 1. `Fpjd\Sso\Models\AuthUser`
+### 1. `Fpjd\Sso\Models\Account`
 Mapea a la vista MySQL de solo lectura `users_public`:
 - **Propiedades**: `id` (UUID), `identification`, `first_name`, `last_name`, `email`, `phone`, `avatar_url`, `is_active`, `management_id`, `created_at`, `last_login_at`.
 - **Atributos calculados**:
   - `full_name`: Nombre y apellido concatenados.
 - **Relaciones**:
-  - `management(): BelongsTo`: Relación con `AuthManagement`.
+  - `management(): BelongsTo`: Relación con `Management`.
 - **Helpers**:
-  - `AuthUser::loadOrganization($authUsers)`: Carga ansiosa (*eager load*) de `management.company` de forma tolerante a fallos; si las vistas o permisos de empresa no están configurados en la base de datos de Accounts, no rompe la ejecución.
+  - `Account::loadOrganization($accounts)`: Carga ansiosa (*eager load*) de `management.company` de forma tolerante a fallos; si las vistas o permisos de empresa no están configurados en la base de datos de Accounts, no rompe la ejecución.
 
-### 2. `Fpjd\Sso\Models\AuthCompany`
+### 2. `Fpjd\Sso\Models\Company`
 Mapea a la vista `companies_public`:
 - **Propiedades**: `id` (UUID), `name`, `code`, `is_active`.
 - **Relaciones**:
   - `managements(): HasMany`: Relación con las gestiones asociadas a esta empresa.
 
-### 3. `Fpjd\Sso\Models\AuthManagement`
+### 3. `Fpjd\Sso\Models\Management`
 Mapea a la vista `managements_public`:
 - **Propiedades**: `id` (UUID), `name`, `code`, `company_id`, `is_active`.
 - **Relaciones**:
-  - `company(): BelongsTo`: Relación con `AuthCompany`.
+  - `company(): BelongsTo`: Relación con `Company`.
 
 ---
 
@@ -46,7 +46,7 @@ Mapea a la vista `managements_public`:
 En la base de datos de tu aplicación satélite (por ejemplo, Cortesías), la tabla `users` almacena las claves foráneas hacia los perfiles de tu app y la referencia hacia Accounts:
 
 ```php
-use Fpjd\Sso\Models\AuthUser;
+use Fpjd\Sso\Models\Account;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -61,7 +61,7 @@ class User extends Model
      */
     public function authUser(): BelongsTo
     {
-        return $this->belongsTo(AuthUser::class, 'user_auth_id');
+        return $this->belongsTo(Account::class, 'user_auth_id');
     }
 }
 ```

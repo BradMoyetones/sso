@@ -8,7 +8,7 @@ namespace Fpjd\Sso\Exceptions;
  * Se lanza cuando la API de aprovisionamiento de Accounts rechaza la operación
  * por motivos de validación de negocio (documento duplicado, campos faltantes, 4xx).
  */
-class AccountsProvisioningException extends \RuntimeException
+class ProvisioningException extends \RuntimeException implements SsoException
 {
     /**
      * @param int $httpStatus

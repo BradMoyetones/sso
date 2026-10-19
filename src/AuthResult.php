@@ -7,7 +7,7 @@ namespace Fpjd\Sso;
 /**
  * Objeto de transferencia de datos con el resultado de una autenticación exitosa.
  */
-class SsoAuthResult
+class AuthResult
 {
     /**
      * @param object $claims Claims decodificados del JWT verificado

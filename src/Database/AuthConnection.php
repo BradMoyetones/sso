@@ -7,12 +7,12 @@ namespace Fpjd\Sso\Database;
 use Illuminate\Database\Capsule\Manager as Capsule;
 
 /**
- * Registrador de la conexión 'auth' en Eloquent Capsule.
+ * Conexión de solo lectura 'auth' hacia la base de datos de Accounts (Eloquent Capsule).
  */
-class AccountsConnection
+class AuthConnection
 {
     /** Nombre reservado para la conexión de base de datos de Accounts. */
-    public const CONNECTION_NAME = 'auth';
+    public const NAME = 'auth';
 
     /**
      * Registra la conexión 'auth' en la instancia Capsule Manager dada.
@@ -33,6 +33,6 @@ class AccountsConnection
             'charset' => $config['charset'] ?? 'utf8mb4',
             'collation' => $config['collation'] ?? 'utf8mb4_unicode_ci',
             'prefix' => $config['prefix'] ?? '',
-        ], self::CONNECTION_NAME);
+        ], self::NAME);
     }
 }

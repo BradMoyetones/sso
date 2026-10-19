@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Fpjd\Sso\Test;
+namespace Fpjd\Sso\Test\Storage;
 
-use Fpjd\Sso\FileStore;
+use Fpjd\Sso\Storage\FileStore;
 use PHPUnit\Framework\TestCase;
 
 class FileStoreTest extends TestCase

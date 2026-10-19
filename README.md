@@ -1,8 +1,35 @@
 # FPJD SSO (`fpjd/sso`)
 
+[![CI](https://github.com/BradMoyetones/sso/actions/workflows/ci.yml/badge.svg)](https://github.com/BradMoyetones/sso/actions/workflows/ci.yml)
+
 SDK y cliente oficial de integración para el ecosistema de autenticación centralizada (SSO) de la **Fundación Parque Jaime Duque**.
 
 Proporciona soporte completo para el flujo **OAuth2 / OIDC con PKCE**, verificación criptográfica de tokens JWT vía **JWKS**, gestión de sesiones multi-cuenta en **cookies HttpOnly seguras**, y acceso de solo lectura a los modelos de identidad de Accounts.
+
+---
+
+## 🗂️ Estructura del Paquete
+
+El namespace aporta el contexto (`Fpjd\Sso`) y cada clase solo nombra su rol:
+
+```text
+src/
+├── Client.php                     # OAuth2/OIDC + PKCE, JWKS y API de aprovisionamiento
+├── SessionManager.php             # Sesiones multi-cuenta en cookies cifradas
+├── Authenticator.php              # Orquestador para middlewares (verifica y renueva tokens)
+├── AuthResult.php                 # Resultado de una autenticación exitosa
+├── Contracts/Store.php            # Contrato de caché + locks
+├── Storage/FileStore.php          # Implementación en disco de Store
+├── Security/TokenCipher.php       # AES-256-GCM para cookies y relevos
+├── Database/AuthConnection.php    # Registra la conexión de solo lectura 'auth'
+├── Models/                        # Account, Company, Management (solo lectura)
+└── Exceptions/                    # SsoException + excepciones semánticas
+```
+
+Si un nombre choca con una clase de tu app, usa un alias: `use Fpjd\Sso\Client as SsoClient;`.
+
+> [!NOTE]
+> ¿Vienes de la v1? Revisa la [guía de migración v1 → v2](./docs/upgrade-v2.md) y el [CHANGELOG](./CHANGELOG.md).
 
 ---
 
@@ -41,11 +68,11 @@ En el `composer.json` de tu aplicación (por ejemplo `cortesias-backend` o `almu
 "repositories": [
     {
         "type": "vcs",
-        "url": "git@github.com:tu-usuario/accounts-sso-php.git"
+        "url": "https://github.com/BradMoyetones/sso.git"
     }
 ],
 "require": {
-    "fpjd/sso": "^1.0"
+    "fpjd/sso": "^2.0"
 }
 ```
 
@@ -85,15 +112,15 @@ APP_ENV=production
 ### 3. Registro de la Conexión de Base de Datos `'auth'`
 
 > [!IMPORTANT]
-> El nombre de conexión `'auth'` está **estrictamente reservado** para los modelos de este paquete (`AuthUser`, `AuthCompany`, `AuthManagement`).
+> El nombre de conexión `'auth'` está **estrictamente reservado** para los modelos de este paquete (`Account`, `Company`, `Management`).
 
 En el punto de arranque de tu aplicación (donde inicializas Capsule):
 
 ```php
-use Fpjd\Sso\Database\AccountsConnection;
+use Fpjd\Sso\Database\AuthConnection;
 
 // Registra la conexión 'auth' automáticamente leyendo el .env
-AccountsConnection::register($capsule);
+AuthConnection::register($capsule);
 ```
 
 ---
@@ -102,29 +129,29 @@ AccountsConnection::register($capsule);
 
 #### En tu modelo local `User`:
 ```php
-use Fpjd\Sso\Models\AuthUser;
+use Fpjd\Sso\Models\Account;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class User extends Model
 {
     public function authUser(): BelongsTo
     {
-        return $this->belongsTo(AuthUser::class, 'user_auth_id');
+        return $this->belongsTo(Account::class, 'user_auth_id');
     }
 }
 ```
 
 #### En tu `AuthController`:
 ```php
-use Fpjd\Sso\AccountsClient;
-use Fpjd\Sso\AccountSessions;
-use Fpjd\Sso\Exceptions\AccountsGrantException;
+use Fpjd\Sso\Client;
+use Fpjd\Sso\Exceptions\GrantException;
+use Fpjd\Sso\SessionManager;
 
 class AuthController
 {
     public function __construct(
-        private AccountsClient $accounts,
-        private AccountSessions $sessions,
+        private Client $accounts,
+        private SessionManager $sessions,
     ) {
     }
 
@@ -142,11 +169,12 @@ class AuthController
 Para consultar la arquitectura interna, ciclo de vida de los tokens, contratos y guías paso a paso, revisa la carpeta [`docs/`](./docs/):
 
 - 🏛️ [Arquitectura Global y Flujo OIDC](./docs/index.md)
-- 🌐 [Cliente HTTP y Aprovisionamiento (`AccountsClient`)](./docs/client.md)
-- 🍪 [Sesiones, Cookies y Autenticador (`AccountSessions` y `SsoAuthenticator`)](./docs/session.md)
+- 🌐 [Cliente HTTP y Aprovisionamiento (`Client`)](./docs/client.md)
+- 🍪 [Sesiones, Cookies y Autenticador (`SessionManager` y `Authenticator`)](./docs/session.md)
 - 🔒 [Criptografía y Almacén de Caché (`TokenCipher` y `FileStore`)](./docs/security.md)
 - 🗄️ [Modelos de Datos y Reserva de Conexión 'auth'](./docs/models/index.md)
 - 🚀 [Guía de Integración Paso a Paso](./docs/integration-guide.md)
+- ⬆️ [Migración v1 → v2](./docs/upgrade-v2.md)
 
 ---
 

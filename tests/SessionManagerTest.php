@@ -4,22 +4,22 @@ declare(strict_types=1);
 
 namespace Fpjd\Sso\Test;
 
-use Fpjd\Sso\AccountSessions;
-use Fpjd\Sso\TokenCipher;
+use Fpjd\Sso\SessionManager;
+use Fpjd\Sso\Security\TokenCipher;
 use Nyholm\Psr7\Response;
 use Nyholm\Psr7\ServerRequest;
 use PHPUnit\Framework\TestCase;
 
-class AccountSessionsTest extends TestCase
+class SessionManagerTest extends TestCase
 {
     private TokenCipher $cipher;
-    private AccountSessions $sessions;
+    private SessionManager $sessions;
 
     protected function setUp(): void
     {
         parent::setUp();
         $this->cipher = new TokenCipher(random_bytes(32));
-        $this->sessions = new AccountSessions(
+        $this->sessions = new SessionManager(
             cipher: $this->cipher,
             cookiePrefix: 'testsso',
             secure: false

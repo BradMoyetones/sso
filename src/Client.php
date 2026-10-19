@@ -7,25 +7,27 @@ namespace Fpjd\Sso;
 use Firebase\JWT\JWK;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
-use Fpjd\Sso\Exceptions\AccountsGrantException;
-use Fpjd\Sso\Exceptions\AccountsProvisioningException;
-use Fpjd\Sso\Exceptions\AccountsUnavailableException;
+use Fpjd\Sso\Contracts\Store;
+use Fpjd\Sso\Exceptions\GrantException;
+use Fpjd\Sso\Exceptions\ProvisioningException;
+use Fpjd\Sso\Exceptions\UnavailableException;
+use Fpjd\Sso\Storage\FileStore;
 
 /**
  * Cliente HTTP oficial de Accounts (SSO).
  * Gestiona el flujo OAuth2 / OpenID Connect + PKCE, la verificación de tokens JWT
  * mediante JWKS público con caché, y la API de aprovisionamiento de usuarios.
  */
-class AccountsClient
+class Client
 {
     private const JWKS_FRESH_TTL = 300;
     private const JWKS_STALE_TTL = 86400;
     private const JWKS_FORCED_REFETCH_INTERVAL = 60;
 
-    private StoreInterface $store;
+    private Store $store;
 
     public function __construct(
-        ?StoreInterface $store = null,
+        ?Store $store = null,
         private ?string $baseUrl = null,
         private ?string $clientId = null,
         private ?string $clientSecret = null,
@@ -67,8 +69,8 @@ class AccountsClient
      * Canjea el código de autorización por el par de tokens (access_token, refresh_token).
      *
      * @return array<string, mixed>
-     * @throws AccountsGrantException si el código es inválido o expiró
-     * @throws AccountsUnavailableException si Accounts no responde
+     * @throws GrantException si el código es inválido o expiró
+     * @throws UnavailableException si Accounts no responde
      */
     public function exchangeCode(string $code, string $verifier): array
     {
@@ -83,7 +85,7 @@ class AccountsClient
      * Rota y renueva los tokens utilizando el refresh token.
      *
      * @return array<string, mixed>
-     * @throws AccountsGrantException si el refresh token fue revocado o venció
+     * @throws GrantException si el refresh token fue revocado o venció
      */
     public function refresh(string $refreshToken): array
     {
@@ -225,12 +227,12 @@ class AccountsClient
         }
 
         if ($status === 400) {
-            throw new AccountsGrantException($data['error_description'] ?? 'invalid_grant');
+            throw new GrantException($data['error_description'] ?? 'invalid_grant');
         }
 
         error_log("[accounts-sso] /api/token respondió $status: " . json_encode($data));
 
-        throw new AccountsUnavailableException("El servidor de autenticación respondió de forma errónea ($status).");
+        throw new UnavailableException("El servidor de autenticación respondió de forma errónea ($status).");
     }
 
     /**
@@ -303,7 +305,7 @@ class AccountsClient
         }
 
         if (in_array($status, [404, 409, 422, 429], true) || ($status === 403 && ($data['error'] ?? '') === 'no_access')) {
-            throw new AccountsProvisioningException(
+            throw new ProvisioningException(
                 $status,
                 (string) ($data['error'] ?? 'error'),
                 (string) ($data['error_description'] ?? 'Accounts rechazó la operación.'),
@@ -313,7 +315,7 @@ class AccountsClient
 
         error_log("[accounts-sso] aprovisionamiento $path respondió $status: " . json_encode($data));
 
-        throw new AccountsUnavailableException("No fue posible procesar la operación de aprovisionamiento ($status).");
+        throw new UnavailableException("No fue posible procesar la operación de aprovisionamiento ($status).");
     }
 
     // ─── JWKS y Claves Públicas ────────────────────────────────────────────────
@@ -345,7 +347,7 @@ class AccountsClient
         $jwks = $fresh !== null ? json_decode($fresh, true) : null;
 
         if (!is_array($jwks) || empty($jwks['keys'])) {
-            throw new AccountsUnavailableException('No se pudo obtener el conjunto de claves JWKS de Accounts.');
+            throw new UnavailableException('No se pudo obtener el conjunto de claves JWKS de Accounts.');
         }
 
         return JWK::parseKeySet($jwks, 'RS256');

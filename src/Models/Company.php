@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Fpjd\Sso\Models;
 
+use Fpjd\Sso\Database\AuthConnection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -11,11 +12,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * Modelo de solo lectura para las empresas registradas en Accounts (FPJD, IDT, etc.).
  * Mapea a la vista pública `companies_public` en la base de datos de SSO.
  *
- * NOTA: La conexión 'auth' está estrictamente reservada para este paquete.
+ * NOTA: La conexión AuthConnection::NAME ('auth') está estrictamente reservada para este paquete.
  */
-class AuthCompany extends Model
+class Company extends Model
 {
-    protected $connection = 'auth';
+    protected $connection = AuthConnection::NAME;
     protected $table = 'companies_public';
 
     protected $keyType = 'string';
@@ -31,6 +32,6 @@ class AuthCompany extends Model
      */
     public function managements(): HasMany
     {
-        return $this->hasMany(AuthManagement::class, 'company_id');
+        return $this->hasMany(Management::class, 'company_id');
     }
 }

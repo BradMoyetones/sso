@@ -4,32 +4,32 @@ declare(strict_types=1);
 
 namespace Fpjd\Sso\Test;
 
-use Fpjd\Sso\AccountSessions;
-use Fpjd\Sso\AccountsClient;
+use Fpjd\Sso\SessionManager;
+use Fpjd\Sso\Client;
 use Fpjd\Sso\Exceptions\InvalidTokenException;
 use Fpjd\Sso\Exceptions\UnauthenticatedException;
-use Fpjd\Sso\FileStore;
-use Fpjd\Sso\SsoAuthenticator;
-use Fpjd\Sso\TokenCipher;
+use Fpjd\Sso\Storage\FileStore;
+use Fpjd\Sso\Authenticator;
+use Fpjd\Sso\Security\TokenCipher;
 use Nyholm\Psr7\ServerRequest;
 use PHPUnit\Framework\TestCase;
 
-class SsoAuthenticatorTest extends TestCase
+class AuthenticatorTest extends TestCase
 {
     private TokenCipher $cipher;
     private FileStore $store;
-    private AccountSessions $sessions;
-    private AccountsClient $client;
-    private SsoAuthenticator $authenticator;
+    private SessionManager $sessions;
+    private Client $client;
+    private Authenticator $authenticator;
 
     protected function setUp(): void
     {
         parent::setUp();
         $this->cipher = new TokenCipher(random_bytes(32));
         $this->store = new FileStore(sys_get_temp_dir() . '/sso_auth_test_' . bin2hex(random_bytes(4)));
-        $this->sessions = new AccountSessions($this->cipher, 'sso', false);
-        $this->client = $this->createStub(AccountsClient::class);
-        $this->authenticator = new SsoAuthenticator(
+        $this->sessions = new SessionManager($this->cipher, 'sso', false);
+        $this->client = $this->createStub(Client::class);
+        $this->authenticator = new Authenticator(
             $this->client,
             $this->sessions,
             $this->cipher,

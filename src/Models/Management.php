@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Fpjd\Sso\Models;
 
+use Fpjd\Sso\Database\AuthConnection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -11,11 +12,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * Modelo de solo lectura para las gestiones (áreas operativas) del SSO.
  * Mapea a la vista pública `managements_public` en la base de datos de SSO.
  *
- * NOTA: La conexión 'auth' está estrictamente reservada para este paquete.
+ * NOTA: La conexión AuthConnection::NAME ('auth') está estrictamente reservada para este paquete.
  */
-class AuthManagement extends Model
+class Management extends Model
 {
-    protected $connection = 'auth';
+    protected $connection = AuthConnection::NAME;
     protected $table = 'managements_public';
 
     protected $keyType = 'string';
@@ -31,6 +32,6 @@ class AuthManagement extends Model
      */
     public function company(): BelongsTo
     {
-        return $this->belongsTo(AuthCompany::class, 'company_id');
+        return $this->belongsTo(Company::class, 'company_id');
     }
 }

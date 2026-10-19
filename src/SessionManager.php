@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Fpjd\Sso;
 
+use Fpjd\Sso\Security\TokenCipher;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 
@@ -14,7 +15,7 @@ use Psr\Http\Message\ServerRequestInterface as Request;
  * con la última cuenta utilizada (`<prefix>_last`) y una cookie de flujo por intento
  * de login (`<prefix>_f_<state>`).
  */
-class AccountSessions
+class SessionManager
 {
     public const MAX_ACCOUNTS = 3;
     private const FLOW_TTL = 600;

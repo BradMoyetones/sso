@@ -7,7 +7,7 @@ namespace Fpjd\Sso\Exceptions;
 /**
  * Se lanza cuando los tokens o cookies de sesión presentan manipulación o firma inválida.
  */
-class InvalidTokenException extends \RuntimeException
+class InvalidTokenException extends \RuntimeException implements SsoException
 {
     public function __construct(
         string $message = 'El token o la sesión no son válidos.',

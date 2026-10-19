@@ -4,17 +4,17 @@ declare(strict_types=1);
 
 namespace Fpjd\Sso\Test;
 
-use Fpjd\Sso\AccountsClient;
+use Fpjd\Sso\Client;
 use PHPUnit\Framework\TestCase;
 
-class AccountsClientTest extends TestCase
+class ClientTest extends TestCase
 {
-    private AccountsClient $client;
+    private Client $client;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->client = new AccountsClient(
+        $this->client = new Client(
             baseUrl: 'https://auth.example.com',
             clientId: 'test-app',
             clientSecret: 'secret-xyz'
@@ -23,7 +23,7 @@ class AccountsClientTest extends TestCase
 
     public function testGenerateCodeVerifier(): void
     {
-        $verifier = AccountsClient::generateCodeVerifier();
+        $verifier = Client::generateCodeVerifier();
 
         $this->assertNotEmpty($verifier);
         // Base64Url string should only contain alphanumeric, '-', '_'
@@ -36,9 +36,9 @@ class AccountsClientTest extends TestCase
     {
         $verifier = 'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM';
         // Known S256 challenge for above verifier
-        $expectedChallenge = AccountsClient::base64Url(hash('sha256', $verifier, true));
+        $expectedChallenge = Client::base64Url(hash('sha256', $verifier, true));
 
-        $challenge = AccountsClient::generateCodeChallenge($verifier);
+        $challenge = Client::generateCodeChallenge($verifier);
         $this->assertSame($expectedChallenge, $challenge);
         $this->assertMatchesRegularExpression('/^[A-Za-z0-9_-]+$/', $challenge);
     }
@@ -46,7 +46,7 @@ class AccountsClientTest extends TestCase
     public function testBase64Url(): void
     {
         $data = "\x00\x01\x02\xfd\xfe\xff";
-        $encoded = AccountsClient::base64Url($data);
+        $encoded = Client::base64Url($data);
 
         $this->assertStringNotContainsString('+', $encoded);
         $this->assertStringNotContainsString('/', $encoded);
@@ -55,16 +55,16 @@ class AccountsClientTest extends TestCase
 
     public function testSafeReturnPath(): void
     {
-        $this->assertSame('/dashboard', AccountsClient::safeReturnPath('/dashboard'));
-        $this->assertSame('/requests/123?page=2', AccountsClient::safeReturnPath('/requests/123?page=2'));
+        $this->assertSame('/dashboard', Client::safeReturnPath('/dashboard'));
+        $this->assertSame('/requests/123?page=2', Client::safeReturnPath('/requests/123?page=2'));
 
         // Reject external/malicious paths
-        $this->assertSame('/', AccountsClient::safeReturnPath('//evil.com'));
-        $this->assertSame('/', AccountsClient::safeReturnPath('https://evil.com'));
-        $this->assertSame('/', AccountsClient::safeReturnPath('javascript:alert(1)'));
-        $this->assertSame('/', AccountsClient::safeReturnPath(''));
-        $this->assertSame('/', AccountsClient::safeReturnPath(null));
-        $this->assertSame('/fallback', AccountsClient::safeReturnPath(null, '/fallback'));
+        $this->assertSame('/', Client::safeReturnPath('//evil.com'));
+        $this->assertSame('/', Client::safeReturnPath('https://evil.com'));
+        $this->assertSame('/', Client::safeReturnPath('javascript:alert(1)'));
+        $this->assertSame('/', Client::safeReturnPath(''));
+        $this->assertSame('/', Client::safeReturnPath(null));
+        $this->assertSame('/fallback', Client::safeReturnPath(null, '/fallback'));
     }
 
     public function testAuthorizeUrlGeneration(): void

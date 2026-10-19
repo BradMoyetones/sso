@@ -1,6 +1,6 @@
-# Cliente HTTP y Aprovisionamiento (`AccountsClient`)
+# Cliente HTTP y Aprovisionamiento (`Client`)
 
-La clase `Fpjd\Sso\AccountsClient` es el punto de enlace HTTP entre la aplicación satélite y el servidor central de Accounts.
+La clase `Fpjd\Sso\Client` es el punto de enlace HTTP entre la aplicación satélite y el servidor central de Accounts.
 
 ---
 

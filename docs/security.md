@@ -6,7 +6,7 @@ La seguridad del SDK descansa sobre dos pilares: cifrado autenticado en reposo p
 
 ## 🔐 Cifrado Autenticado (`TokenCipher`)
 
-`Fpjd\Sso\TokenCipher` utiliza el algoritmo simétrico **AES-256-GCM** (Galois/Counter Mode).
+`Fpjd\Sso\Security\TokenCipher` utiliza el algoritmo simétrico **AES-256-GCM** (Galois/Counter Mode).
 
 ### ¿Por qué AES-256-GCM?
 A diferencia de CBC o ECB, GCM provee **Confidencialidad + Integridad Autenticada**:
@@ -32,12 +32,12 @@ openssl rand -hex 32
 
 ---
 
-## 🗄️ Caché y Mutex Locks (`StoreInterface` y `FileStore`)
+## 🗄️ Caché y Mutex Locks (`Store` y `FileStore`)
 
-### `StoreInterface`
+### `Store`
 Define el contrato para cualquier almacén de datos temporal:
 ```php
-interface StoreInterface
+interface Store
 {
     public function get(string $key): ?string;
     public function put(string $key, string $value, int $ttl): void;

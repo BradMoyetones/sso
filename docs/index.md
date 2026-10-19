@@ -42,7 +42,7 @@ sequenceDiagram
     Note over B: Valida cookie de flujo y state.<br/>Canjea code + verifier por tokens con Accounts.<br/>Aprovisiona usuario local si es nuevo.<br/>Emite cookie de cuenta cifrada.
     B-->>U: Redirección 302 al Frontend con token en cookie
     F->>B: Peticiones a la API (adjunta cookie HttpOnly)
-    Note over B: SsoAuthenticator verifica JWT con JWKS.<br/>Ejecuta lógica de negocio.
+    Note over B: Authenticator verifica JWT con JWKS.<br/>Ejecuta lógica de negocio.
 ```
 
 ---
@@ -56,4 +56,4 @@ El paquete soporta de forma nativa que un operador o líder administrativo tenga
   ```http
   X-Account: e4c9b362-9720-7f28-a28a-788bf30573be
   ```
-  `SsoAuthenticator` prioriza la cuenta indicada en `X-Account`, permitiendo operar con diferentes cuentas en pestañas simultáneas sin colisiones.
+  `Authenticator` prioriza la cuenta indicada en `X-Account`, permitiendo operar con diferentes cuentas en pestañas simultáneas sin colisiones.

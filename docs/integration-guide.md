@@ -17,7 +17,7 @@ Mientras el paquete se encuentre en un repositorio en GitHub, puedes instalarlo 
     }
   ],
   "require": {
-    "fpjd/sso": "^1.0"
+    "fpjd/sso": "^2.0"
   }
 }
 ```
@@ -60,19 +60,18 @@ DB_AUTH_PASSWORD="secret_password"
 Ejemplo con PHP-DI (`dependencies.php` o `container.php`):
 
 ```php
-use Fpjd\Sso\AccountSessions;
-use Fpjd\Sso\AccountsClient;
-use Fpjd\Sso\Database\AccountsConnection;
-use Fpjd\Sso\FileStore;
-use Fpjd\Sso\SsoAuthenticator;
-use Fpjd\Sso\StoreInterface;
-use Fpjd\Sso\TokenCipher;
+use Fpjd\Sso\Authenticator;
+use Fpjd\Sso\Client;
+use Fpjd\Sso\Contracts\Store;
+use Fpjd\Sso\Security\TokenCipher;
+use Fpjd\Sso\SessionManager;
+use Fpjd\Sso\Storage\FileStore;
 use Illuminate\Database\Capsule\Manager as Capsule;
 use Psr\Container\ContainerInterface;
 
 return [
     // 1. Almacén de caché y cerrojos por archivo
-    StoreInterface::class => function () {
+    Store::class => function () {
         $cacheDir = __DIR__ . '/../../storage/cache/sso';
         return new FileStore($cacheDir);
     },
@@ -87,9 +86,9 @@ return [
     },
 
     // 3. Cliente de comunicación HTTP con SSO
-    AccountsClient::class => function (ContainerInterface $c) {
-        return new AccountsClient(
-            store: $c->get(StoreInterface::class),
+    Client::class => function (ContainerInterface $c) {
+        return new Client(
+            store: $c->get(Store::class),
             baseUrl: $_ENV['SSO_BASE_URL'],
             clientId: $_ENV['SSO_CLIENT_ID'],
             clientSecret: $_ENV['SSO_CLIENT_SECRET'],
@@ -97,8 +96,8 @@ return [
     },
 
     // 4. Gestor de sesiones multi-cuenta y cookies
-    AccountSessions::class => function (ContainerInterface $c) {
-        return new AccountSessions(
+    SessionManager::class => function (ContainerInterface $c) {
+        return new SessionManager(
             cipher: $c->get(TokenCipher::class),
             cookiePrefix: $_ENV['COOKIE_PREFIX'] ?? 'fpjd',
             secure: ($_ENV['APP_ENV'] ?? 'production') === 'production',
@@ -106,12 +105,12 @@ return [
     },
 
     // 5. Autenticador agnóstico de solicitudes
-    SsoAuthenticator::class => function (ContainerInterface $c) {
-        return new SsoAuthenticator(
-            accounts: $c->get(AccountsClient::class),
-            sessions: $c->get(AccountSessions::class),
+    Authenticator::class => function (ContainerInterface $c) {
+        return new Authenticator(
+            client: $c->get(Client::class),
+            sessions: $c->get(SessionManager::class),
             cipher: $c->get(TokenCipher::class),
-            store: $c->get(StoreInterface::class),
+            store: $c->get(Store::class),
         );
     },
 ];
@@ -122,7 +121,7 @@ return [
 En tu bootstrap de Eloquent Capsule:
 
 ```php
-use Fpjd\Sso\Database\AccountsConnection;
+use Fpjd\Sso\Database\AuthConnection;
 use Illuminate\Database\Capsule\Manager as Capsule;
 
 $capsule = new Capsule();
@@ -135,8 +134,8 @@ $capsule->addConnection([
     // ...
 ], 'default');
 
-// Registrar la conexión reservada 'auth' para los modelos de fpjd/sso
-AccountsConnection::register($capsule, [
+// AuthConnection la conexión reservada 'auth' para los modelos de fpjd/sso
+AuthConnection::register($capsule, [
     'host'      => $_ENV['DB_AUTH_HOST'],
     'port'      => $_ENV['DB_AUTH_PORT'] ?? '3306',
     'database'  => $_ENV['DB_AUTH_DATABASE'],
@@ -159,17 +158,17 @@ En tu aplicación Slim 4 o framework PSR-7:
 ```php
 namespace App\Controllers;
 
-use Fpjd\Sso\AccountSessions;
-use Fpjd\Sso\AccountsClient;
-use Fpjd\Sso\Exceptions\AccountsGrantException;
+use Fpjd\Sso\Client;
+use Fpjd\Sso\Exceptions\GrantException;
+use Fpjd\Sso\SessionManager;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 
 class AuthController
 {
     public function __construct(
-        private AccountsClient $accounts,
-        private AccountSessions $sessions,
+        private Client $accounts,
+        private SessionManager $sessions,
     ) {}
 
     /**
@@ -183,8 +182,8 @@ class AuthController
         $returnTo = $params['return_to'] ?? '/';
 
         $state = bin2hex(random_bytes(16));
-        $verifier = AccountsClient::generateCodeVerifier();
-        $challenge = AccountsClient::generateCodeChallenge($verifier);
+        $verifier = Client::generateCodeVerifier();
+        $challenge = Client::generateCodeChallenge($verifier);
 
         $url = $this->accounts->authorizeUrl(
             state: $state,
@@ -223,7 +222,7 @@ class AuthController
 
         try {
             $tokens = $this->accounts->exchangeCode($code, $flow['v']);
-        } catch (AccountsGrantException $e) {
+        } catch (GrantException $e) {
             return $this->error($response, 401, 'Error al canjear el código de autorización: ' . $e->getMessage());
         }
 
@@ -285,14 +284,14 @@ class AuthController
 
 ## 5. Implementación de `AuthMiddleware` (PSR-15)
 
-El middleware valida el token mediante `SsoAuthenticator`, renueva con mutex y relevo en caché si expiró, y adjunta la información de sesión a los atributos del `$request`:
+El middleware valida el token mediante `Authenticator`, renueva con mutex y relevo en caché si expiró, y adjunta la información de sesión a los atributos del `$request`:
 
 ```php
 namespace App\Middlewares;
 
 use Fpjd\Sso\Exceptions\SessionExpiredException;
+use Fpjd\Sso\Authenticator;
 use Fpjd\Sso\Exceptions\UnauthenticatedException;
-use Fpjd\Sso\SsoAuthenticator;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Http\Server\MiddlewareInterface;
@@ -302,7 +301,7 @@ use Slim\Psr7\Response as SlimResponse;
 class AuthMiddleware implements MiddlewareInterface
 {
     public function __construct(
-        private SsoAuthenticator $authenticator,
+        private Authenticator $authenticator,
     ) {}
 
     public function process(Request $request, RequestHandler $handler): Response
@@ -361,8 +360,8 @@ Para vincular entidades de tu aplicación con usuarios o empresas del SSO, utili
 ```php
 namespace App\Models;
 
-use Fpjd\Sso\Models\AuthCompany;
-use Fpjd\Sso\Models\AuthUser;
+use Fpjd\Sso\Models\Account;
+use Fpjd\Sso\Models\Company;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -375,7 +374,7 @@ class CourtesyRequest extends Model
      */
     public function authUser(): BelongsTo
     {
-        return $this->belongsTo(AuthUser::class, 'user_auth_id', 'id');
+        return $this->belongsTo(Account::class, 'user_auth_id', 'id');
     }
 
     /**
@@ -383,7 +382,7 @@ class CourtesyRequest extends Model
      */
     public function authCompany(): BelongsTo
     {
-        return $this->belongsTo(AuthCompany::class, 'company_id', 'id');
+        return $this->belongsTo(Company::class, 'company_id', 'id');
     }
 }
 ```

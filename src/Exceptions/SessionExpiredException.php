@@ -7,7 +7,7 @@ namespace Fpjd\Sso\Exceptions;
 /**
  * Se lanza cuando la sesión del usuario ha expirado o fue revocada en Accounts.
  */
-class SessionExpiredException extends \RuntimeException
+class SessionExpiredException extends \RuntimeException implements SsoException
 {
     public function __construct(
         string $message = 'La sesión ha expirado.',
