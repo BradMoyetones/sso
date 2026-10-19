@@ -57,7 +57,11 @@ class Account extends Model
     {
         $list = $accounts instanceof self
             ? [$accounts]
-            : array_filter(is_iterable($accounts) ? iterator_to_array($accounts, false) : []);
+            : array_filter(match (true) {
+                is_array($accounts) => array_values($accounts),
+                $accounts instanceof \Traversable => iterator_to_array($accounts, false),
+                default => [],
+            });
 
         if (!$list) {
             return;
