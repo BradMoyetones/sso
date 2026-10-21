@@ -131,7 +131,8 @@ class Client
     /**
      * Registra o vincula una persona en Accounts y le otorga acceso a esta aplicación.
      *
-     * @param array{identification:string, first_name:string, last_name:string, email?:?string, phone?:?string, management_id?:?string} $person
+     * @param array{identification:string, first_name:string, last_name:string, email?:?string, phone?:?string, management_id?:?string, is_external?:bool} $person
+     *        `is_external` solo aplica si la persona se crea: marca la cuenta como externa (sin gestión).
      * @return array{user: array<string, mixed>, created: bool, temporary_password: ?string, access_granted: bool, management_assigned: bool}
      */
     public function provisionUser(array $person, ?string $actedBy = null): array

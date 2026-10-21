@@ -64,6 +64,14 @@ class ModelsTest extends TestCase
         $this->assertSame('Jane Doe', $account->full_name);
     }
 
+    public function testAccountCastsFlagsToBooleans(): void
+    {
+        $account = (new Account())->forceFill(['is_active' => 1, 'is_external' => 0]);
+
+        $this->assertTrue($account->is_active);
+        $this->assertFalse($account->is_external);
+    }
+
     public function testLoadOrganizationToleratesEmptyInput(): void
     {
         Account::loadOrganization(null);

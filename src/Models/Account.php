@@ -28,6 +28,8 @@ class Account extends Model
 
     protected $casts = [
         'is_active' => 'boolean',
+        // Cuenta externa (aliado en convenio). La vista lo expone desde la migración 023 de Accounts.
+        'is_external' => 'boolean',
         'last_login_at' => 'datetime',
     ];
 

@@ -3,6 +3,12 @@
 Todos los cambios relevantes de `fpjd/sso` se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
+## [2.1.0] - 2026-10-21
+
+### Agregado
+- `Account::is_external` (booleano): cuenta externa de Accounts, por ejemplo un aliado en convenio. Requiere la migración 023 de Accounts, que lo expone en `users_public`.
+- `Client::provisionUser()` documenta `is_external` (solo aplica al crear la persona).
+
 ## [2.0.0] - 2026-10-19
 
 ### Cambiado (incompatible)
@@ -26,5 +32,6 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y e
 ### Agregado
 - Versión inicial: cliente OAuth2/OIDC + PKCE, verificación JWKS, sesiones multi-cuenta en cookies cifradas, autenticador para middlewares, modelos de solo lectura de Accounts y API de aprovisionamiento.
 
+[2.1.0]: https://github.com/BradMoyetones/sso/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/BradMoyetones/sso/compare/v1.0.0...v2.0.0
 [1.0.0]: https://github.com/BradMoyetones/sso/releases/tag/v1.0.0
