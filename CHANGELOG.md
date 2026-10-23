@@ -3,6 +3,17 @@
 Todos los cambios relevantes de `fpjd/sso` se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
+## [2.2.0] - 2026-10-22
+
+### Agregado
+- Integraciones entre apps con token exchange (RFC 8693). Requiere las migraciones 024 y 025 de Accounts.
+- `Client::exchangeToken()`: la API cliente canjea el token de sesión del usuario por uno para otra app. Se cachea hasta poco antes de vencer.
+- `Client::verifyDelegated()`: la API destino valida el token de integración recibido (`act`, `scope`).
+- `Exceptions\IntegrationException`: la integración no está habilitada en Accounts (`invalid_scope` / `invalid_target`).
+
+### Cambiado
+- `Client::verify()` rechaza los tokens de integración (claim `act`): un token delegado no abre sesión. Los tokens de sesión no cambian.
+
 ## [2.1.0] - 2026-10-21
 
 ### Agregado
@@ -32,6 +43,7 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y e
 ### Agregado
 - Versión inicial: cliente OAuth2/OIDC + PKCE, verificación JWKS, sesiones multi-cuenta en cookies cifradas, autenticador para middlewares, modelos de solo lectura de Accounts y API de aprovisionamiento.
 
+[2.2.0]: https://github.com/BradMoyetones/sso/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/BradMoyetones/sso/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/BradMoyetones/sso/compare/v1.0.0...v2.0.0
 [1.0.0]: https://github.com/BradMoyetones/sso/releases/tag/v1.0.0

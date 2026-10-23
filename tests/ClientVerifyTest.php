@@ -102,6 +102,40 @@ class ClientVerifyTest extends TestCase
         $this->client->verify(JWT::encode($this->claims(), $pem, 'RS256', self::KID));
     }
 
+    public function testSessionVerifyRejectsIntegrationTokens(): void
+    {
+        $this->expectException(\UnexpectedValueException::class);
+
+        $this->client->verify($this->token(['act' => ['sub' => 'visitantes'], 'scope' => 'redemptions.read']));
+    }
+
+    public function testVerifiesIntegrationToken(): void
+    {
+        $claims = $this->client->verifyDelegated($this->token(['act' => ['sub' => 'visitantes'], 'scope' => 'redemptions.read']));
+
+        $this->assertSame('visitantes', $claims->act->sub);
+        $this->assertSame('redemptions.read', $claims->scope);
+    }
+
+    public function testVerifyDelegatedRejectsSessionTokens(): void
+    {
+        $this->expectException(\UnexpectedValueException::class);
+
+        $this->client->verifyDelegated($this->token());
+    }
+
+    public function testExchangeTokenIsServedFromCacheWithoutCallingAccounts(): void
+    {
+        // baseUrl es https://auth.invalid: si fuera a la red, fallaría con UnavailableException.
+        $store = new FileStore($this->cacheDir);
+        $subject = $this->token();
+        $cached = ['access_token' => 'delegated-jwt', 'expires_in' => 300, 'scope' => ['redemptions.read', 'redemptions.redeem']];
+        $store->put('xchg:' . hash('sha256', "$subject|hoteles|redemptions.read redemptions.redeem"), (string) json_encode($cached), 60);
+
+        // El orden de los scopes pedidos no cambia la llave de la caché.
+        $this->assertSame($cached, $this->client->exchangeToken($subject, 'hoteles', ['redemptions.redeem', 'redemptions.read']));
+    }
+
     /**
      * @param array<string, mixed> $overrides
      */

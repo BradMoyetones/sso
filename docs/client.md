@@ -40,6 +40,34 @@ Valida criptográficamente el JWT:
 3. Decodifica y valida firma con `Firebase\JWT\JWT::decode`.
 4. Valida que el `iss` coincida con `ACCOUNTS_ISSUER` y el `aud` con `ACCOUNTS_CLIENT_ID`.
 5. Retorna los claims en un objeto PHP (`$claims->sub`, `$claims->name`, etc.).
+6. Rechaza los tokens de integración (con claim `act`): solo valen por `verifyDelegated()`.
+
+---
+
+## 🔗 Integraciones entre Apps (Token Exchange, RFC 8693)
+
+Una app (cliente) llama a la API de otra (destino) **en nombre de su usuario**. En Accounts, la app
+destino expone *scopes* y el administrador otorga a la app cliente los que necesita
+(`/admin/apps/{destino}` → *Integraciones con otras apps*).
+
+### `exchangeToken(string $subjectToken, string $audience, array $scopes): array`
+Desde la API **cliente**: canjea el access token de sesión del usuario por uno para `$audience`.
+- Devuelve `['access_token', 'expires_in', 'scope' => string[]]`; `scope` trae solo los otorgados.
+- Se cachea en el `Store` hasta 30 s antes de vencer (máx. 5 min).
+- `GrantException`: la sesión del usuario ya no es válida → 401, iniciar sesión de nuevo.
+- `IntegrationException`: la integración no está habilitada (`invalid_scope` / `invalid_target`) → 403.
+- `UnavailableException`: Accounts no responde → 503.
+
+```php
+$token = $client->exchangeToken($accessTokenDelUsuario, 'hoteles', ['redemptions.read']);
+// GET https://api.hoteles…/api/integrations/… con  Authorization: Bearer {$token['access_token']}
+```
+
+### `verifyDelegated(string $jwt): object`
+Desde la API **destino**: valida el Bearer recibido (firma, `iss`, `aud` = esta app, `exp`) y exige
+que sea un token de integración. Claims: `sub` = la persona, `act->sub` / `client_id` = la app que
+actúa en su nombre, `scope` = scopes separados por espacio. Comprobar el scope de cada ruta es
+responsabilidad de la API destino.
 
 ---
 
