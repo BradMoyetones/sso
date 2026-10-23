@@ -9,6 +9,7 @@ use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 use Fpjd\Sso\Contracts\Store;
 use Fpjd\Sso\Exceptions\GrantException;
+use Fpjd\Sso\Exceptions\IntegrationException;
 use Fpjd\Sso\Exceptions\ProvisioningException;
 use Fpjd\Sso\Exceptions\UnavailableException;
 use Fpjd\Sso\Storage\FileStore;
@@ -23,6 +24,8 @@ class Client
     private const JWKS_FRESH_TTL = 300;
     private const JWKS_STALE_TTL = 86400;
     private const JWKS_FORCED_REFETCH_INTERVAL = 60;
+    /** Segundos antes del `exp` en que un token canjeado deja de reutilizarse desde la caché. */
+    private const EXCHANGE_MARGIN = 30;
 
     private Store $store;
 
@@ -183,13 +186,107 @@ class Client
         return $this->provisioning("/api/users/$accountId/apps", [], 'GET');
     }
 
+    // ─── Integraciones entre apps (token exchange, RFC 8693) ───────────────────
+
     /**
-     * Valida la firma criptográfica (RS256 con JWKS), expiración, emisor y audiencia del JWT.
+     * Canjea el access token de sesión del usuario (emitido para ESTA app) por uno para la API
+     * de `$audience`, con los scopes que la integración tenga otorgados en Accounts. Se cachea
+     * hasta poco antes de vencer: llamarlo en cada petición no golpea a Accounts.
+     *
+     * @param string[] $scopes los que se piden; Accounts devuelve solo los otorgados
+     * @return array{access_token: string, expires_in: int, scope: string[]}
+     * @throws GrantException si la sesión del usuario ya no es válida (hay que iniciar sesión)
+     * @throws IntegrationException si la integración no está habilitada (responder 403)
+     * @throws UnavailableException si Accounts no responde
+     */
+    public function exchangeToken(string $subjectToken, string $audience, array $scopes): array
+    {
+        sort($scopes);
+        $cacheKey = 'xchg:' . hash('sha256', $subjectToken . '|' . $audience . '|' . implode(' ', $scopes));
+
+        $cached = $this->store->get($cacheKey);
+        $cached = $cached !== null ? json_decode($cached, true) : null;
+
+        if (is_array($cached) && is_string($cached['access_token'] ?? null)) {
+            return $cached;
+        }
+
+        [$status, $data] = $this->post('/api/token', [
+            'grant_type' => 'urn:ietf:params:oauth:grant-type:token-exchange',
+            'subject_token' => $subjectToken,
+            'subject_token_type' => 'urn:ietf:params:oauth:token-type:access_token',
+            'audience' => $audience,
+            'scope' => implode(' ', $scopes),
+        ]);
+
+        if ($status === 200 && is_string($data['access_token'] ?? null)) {
+            $result = [
+                'access_token' => $data['access_token'],
+                'expires_in' => (int) ($data['expires_in'] ?? 0),
+                'scope' => array_values(array_filter(explode(' ', (string) ($data['scope'] ?? '')))),
+            ];
+
+            // Margen para que el token no venza en camino a la API destino.
+            if ($result['expires_in'] > self::EXCHANGE_MARGIN) {
+                $this->store->put($cacheKey, (string) json_encode($result), $result['expires_in'] - self::EXCHANGE_MARGIN);
+            }
+
+            return $result;
+        }
+
+        $description = (string) ($data['error_description'] ?? $data['error'] ?? 'token-exchange rechazado');
+
+        if ($status === 400 && in_array($data['error'] ?? null, ['invalid_scope', 'invalid_target'], true)) {
+            throw new IntegrationException($description);
+        }
+
+        if ($status === 400) {
+            throw new GrantException($description);
+        }
+
+        error_log("[accounts-sso] token-exchange respondió $status: " . json_encode($data));
+
+        throw new UnavailableException("El servidor de autenticación respondió de forma errónea ($status).");
+    }
+
+    /**
+     * Valida un token de integración recibido por la API de ESTA app (`Authorization: Bearer`):
+     * firma, expiración, emisor, audiencia y que sea delegado (`act`). `sub` es la persona,
+     * `act.sub` la app que actúa en su nombre y `scope` lo que puede hacer.
+     *
+     * @throws \Firebase\JWT\ExpiredException si el token venció
+     * @throws \Throwable si la firma o los claims son inválidos
+     */
+    public function verifyDelegated(string $jwt): object
+    {
+        $claims = $this->decode($jwt);
+
+        if (!is_string($claims->act->sub ?? null) || !is_string($claims->scope ?? null)) {
+            throw new \UnexpectedValueException('No es un token de integración (act/scope).');
+        }
+
+        return $claims;
+    }
+
+    /**
+     * Valida la firma criptográfica (RS256 con JWKS), expiración, emisor y audiencia del JWT
+     * de una sesión. Rechaza los tokens de integración: esos solo sirven por `verifyDelegated`.
      *
      * @throws \Firebase\JWT\ExpiredException si el token venció
      * @throws \Throwable si la firma o los claims son inválidos
      */
     public function verify(string $jwt): object
+    {
+        $claims = $this->decode($jwt);
+
+        if (isset($claims->act)) {
+            throw new \UnexpectedValueException('Un token de integración no abre sesión.');
+        }
+
+        return $claims;
+    }
+
+    private function decode(string $jwt): object
     {
         JWT::$leeway = 30;
 
