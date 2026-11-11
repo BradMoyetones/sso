@@ -3,6 +3,11 @@
 Todos los cambios relevantes de `fpjd/sso` se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
+## [2.3.0] - 2026-11-11
+
+### Agregado
+- `Client::provisionUser()` documenta `temporary_password` (opcional, solo al crear): la app fija la clave inicial en vez de recibir una generada. Requiere el soporte en Accounts.
+
 ## [2.2.0] - 2026-10-22
 
 ### Agregado
