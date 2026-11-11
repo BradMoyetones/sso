@@ -89,7 +89,9 @@ $result = $accounts->provisionUser([
 Devuelve:
 - `user`: Datos del usuario.
 - `created`: `true` si fue creado desde cero, `false` si ya existía en Accounts y solo se le concedió acceso a esta aplicación.
-- `temporary_password`: Contraseña temporal si fue creado por primera vez.
+- `temporary_password`: Contraseña temporal si fue creado por primera vez (la generada por Accounts o la enviada por la app).
+
+Opcional al crear: `temporary_password` fija la clave inicial (p. ej. el documento, para no dictar una generada). Solo se exige que no esté vacía y no pase de 72 bytes, porque la persona debe cambiarla en su primer ingreso. Si la persona ya existía se ignora. Requiere Accounts con soporte de `temporary_password` (un Accounts anterior la ignora y genera una).
 - `access_granted`: Confirmación de acceso habilitado.
 
 ### `grantAccess(string $accountId, ?string $actedBy = null)`
