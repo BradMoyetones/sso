@@ -101,4 +101,12 @@ class ClientTest extends TestCase
         $this->assertSame('select_account', $query['prompt']);
         $this->assertSame('018f8b80-60b6-7643-9812-34567890abcd', $query['login_hint']);
     }
+
+    public function testAuthorizeUrlSilentWinsOverSelectAccount(): void
+    {
+        $url = $this->client->authorizeUrl('state-abc', 'challenge-xyz', selectAccount: true, silent: true);
+
+        parse_str(parse_url($url, PHP_URL_QUERY), $query);
+        $this->assertSame('none', $query['prompt']);
+    }
 }

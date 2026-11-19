@@ -17,6 +17,11 @@ $url = $accounts->authorizeUrl(
 );
 ```
 
+**Inicio silencioso (`silent: true` → `prompt=none`).** Para páginas públicas que quieren entrar solo si ya hay sesión en Accounts (p. ej. mostrar el avatar). Accounts nunca muestra pantallas: si hay una cuenta activa lista, el callback recibe `code` como siempre; si no, recibe `error` en vez de `code` (`login_required`, `account_selection_required` o `interaction_required`) junto con el `state`. El callback debe tratar ese `error` como «sin sesión» y volver a la página sin mostrar un error.
+```php
+$url = $accounts->authorizeUrl($state, $codeChallenge, silent: true);
+```
+
 ### 2. `exchangeCode(string $code, string $verifier): array`
 Realiza una petición POST a `/api/token` con `grant_type=authorization_code`, enviando las credenciales de cliente (`client_id`, `client_secret`) y el `code_verifier`.
 Devuelve un array con:
@@ -102,6 +107,9 @@ Revoca el acceso a esta aplicación (el usuario sigue existiendo y manteniendo a
 
 ### `setManagement(string $accountId, ?string $managementId, ?string $actedBy = null)`
 Actualiza el área de gestión asignada a la persona en Accounts.
+
+### `requirePasswordChange(string $accountId, ?string $actedBy = null)`
+Expira la contraseña sin cambiarla: la persona entra con la actual y Accounts le exige una nueva que cumpla la política completa (en todas sus apps). Útil al darle un perfil con privilegios a quien entra con su documento. Debe tener acceso a esta app (si no, `ProvisioningException` 403 `no_access`). Requiere Accounts con `POST /api/users/{id}/password/require-change`.
 
 ### `userApps(string $accountId): array`
 Devuelve la lista de aplicaciones del parque a las que este usuario tiene permiso, con sus URLs de acceso directo y enlaces de solicitud en caso de estar bloqueadas.
