@@ -43,12 +43,16 @@ class Client
      * Construye la URL de redirección a Accounts (/authorize) con PKCE.
      *
      * @param string|null $loginHint UUID de la cuenta que se desea preseleccionar.
+     * @param bool $silent prompt=none: Accounts nunca muestra pantallas; si hiciera falta, vuelve al
+     *        callback con `error` (login_required, account_selection_required o interaction_required)
+     *        en vez de `code`. Tiene prioridad sobre $selectAccount.
      */
     public function authorizeUrl(
         string $state,
         string $codeChallenge,
         bool $selectAccount = false,
-        ?string $loginHint = null
+        ?string $loginHint = null,
+        bool $silent = false
     ): string {
         $params = [
             'client_id' => $this->clientId(),
@@ -57,7 +61,9 @@ class Client
             'code_challenge_method' => 'S256',
         ];
 
-        if ($selectAccount) {
+        if ($silent) {
+            $params['prompt'] = 'none';
+        } elseif ($selectAccount) {
             $params['prompt'] = 'select_account';
         }
 
@@ -175,6 +181,17 @@ class Client
             'management_id' => $managementId,
             'acted_by' => $actedBy,
         ]);
+    }
+
+    /**
+     * Expira la contraseña de la persona sin cambiarla: al entrar con la actual, Accounts le exige
+     * una nueva (en todas sus apps). Debe tener acceso a esta app. Idempotente.
+     *
+     * @return array{user: array<string, mixed>, password_change_required: bool}
+     */
+    public function requirePasswordChange(string $accountId, ?string $actedBy = null): array
+    {
+        return $this->provisioning("/api/users/$accountId/password/require-change", ['acted_by' => $actedBy]);
     }
 
     /**

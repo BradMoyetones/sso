@@ -3,6 +3,12 @@
 Todos los cambios relevantes de `fpjd/sso` se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
+## [2.4.0] - 2026-11-19
+
+### Agregado
+- `Client::authorizeUrl(..., silent: true)` envía `prompt=none` (inicio silencioso): Accounts no muestra pantallas y, si hiciera falta, vuelve al callback con `error` (`login_required`, `account_selection_required`, `interaction_required`) en vez de `code`. Requiere el soporte en Accounts; sin él, el parámetro se ignora y se sigue el flujo normal.
+- `Client::requirePasswordChange()`: la app pide que la persona cambie su contraseña al entrar, sin cambiarla. Requiere el endpoint en Accounts.
+
 ## [2.3.0] - 2026-11-11
 
 ### Agregado
